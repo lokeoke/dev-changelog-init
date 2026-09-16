@@ -14,3 +14,8 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+
+# Agents customization
+skills-lock.json
+.agents
+.claude
