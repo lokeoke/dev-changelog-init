@@ -37,7 +37,20 @@ changelog-tracking process. Optionally give a changelog directory, or
 `skip backfill`.
 
 Four phases, confirmed before any file changes: **Detect → Ask → Plan &
-confirm → Execute & verify**.
+confirm → Execute & verify**. Phase 0 detection classifies the repo into one
+of four scenarios and branches the rest of the flow on it:
+
+- **A** — no changelog convention exists yet; bootstrap one from scratch.
+- **B** — convention exists, but no index/frontmatter; retrofit it.
+- **C** — convention and index both already exist; verify, extend the gap, or
+  rebuild.
+- **Partial** — some but not all pieces exist; only the missing ones get
+  touched.
+
+If Phase 0 also finds an overlapping skill or tool (a prior journal/dev-log
+under a different name), it asks whether to **replace** it with the bundled
+convention or **leave** it as-is and index it in place — never guessed
+silently.
 
 ## Compatibility
 
@@ -50,6 +63,8 @@ Any tracker, or none, works. The `.mjs` reference scripts need adapting
 | Path | Purpose |
 | --- | --- |
 | `SKILL.md` | Interactive setup and verification workflow. |
+| `references/detection.md` | Phase 0 detection heuristics — what to grep for, per area. |
+| `references/lint-notes.md` | Static-analysis patterns to keep when adapting the reference scripts. |
 | `assets/dev-changelog/SKILL.md` | Post-commit entry creation/update workflow. |
 | `assets/dev-changelog/dev-changelog-template.md` | Entry template with frontmatter. |
 | `assets/rebuild-dev-changelog-index.reference.mjs` | Deterministic index generator reference. |
