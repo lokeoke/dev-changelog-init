@@ -1,6 +1,6 @@
 ---
 name: dev-changelog-init
-description: "Sets up a searchable, filterable changelog system in a repo — bootstraps a per-issue changelog-writing convention from scratch if none exists, retrofits an index onto one that already exists, or verifies/extends a partial prior setup. Adds issue/date/paths/tags frontmatter, a generated INDEX.md, index/search scripts, and triggers so agents check prior history before implementing. Interactive: detects repo state first, asks scenario-specific questions, shows one consolidated plan for confirmation before touching any files. Use when asked to add a changelog, add a changelog index, make a changelog searchable, or extend/retrofit a repo-changelog-style skill with search."
+description: "Sets up a searchable, filterable changelog system in a repo — bootstraps a per-issue changelog-writing convention from scratch if none exists, retrofits an index onto one that already exists, or verifies/extends a partial prior setup. Adds issue/date/paths/tags frontmatter, a generated INDEX.md, index/search scripts, and triggers so agents check prior history before implementing. Interactive: detects repo state first, asks scenario-specific questions, shows one consolidated plan for confirmation before touching any files. Use when asked to add a changelog, add a changelog index, make a changelog searchable, or extend/retrofit an existing changelog-tracking skill with search."
 argument-hint: "[path to changelog dir | skip backfill]"
 ---
 # Changelog Index
@@ -67,6 +67,12 @@ No assume anything from reference build carry over. Dig:
   headings, and whether any frontmatter already there. No tracker is
   privileged — GitHub Issues, Jira, Linear, or none at all are all valid
   starting points; adapt to whatever this repo actually uses.
+- **Any overlapping skill or tool.** Widen the same grep beyond "changelog"
+  naming — a prior journal, dev-log, or memory-keeping skill/tool may cover
+  the same job under its own name and directory. Do not assume what it is
+  called or where it lives. If detection finds a candidate, note its name and
+  path here as evidence only; Phase 1 asks the user to confirm or supply both
+  before deciding whether to replace it.
 - **The changelog file format**, if convention exist. Confirm entries are
   Markdown (or other format that support `---`-delimited frontmatter block and
   `# ` heading) before assume Phases 1-3 apply as written — non-Markdown format
@@ -220,6 +226,20 @@ missing) from the Phase 3 checklist and ask which path:
 3. **Rebuild from scratch** — explicit opt-in only; treat as full Scenario B
    retrofit, replace what there.
 
+**Any scenario, only if Phase 0 flagged an overlapping skill or tool** — ask
+the user to confirm or supply its exact directory and name, then whether to:
+
+1. **Replace it** — its file(s) get overwritten with the bundled generic
+   asset (`assets/dev-changelog/SKILL.md` + `changelog-template.md`, adapted
+   to whatever Phase 1 settled above) instead of hand-merged with its
+   existing logic.
+2. **Leave it as-is** — treat it as the Scenario B/C convention found in
+   Phase 0 and edit it in place per Phase 3.4 instead.
+
+Never guess this from a name match alone (e.g. do not assume a skill called
+`journal` or `memory` is safe to replace); the user's answer here is the only
+authorization to overwrite another skill's file.
+
 ## Phase 2 — Plan & Confirm
 
 Merge everything settled in Phases 0-1 — frontmatter schema, index format,
@@ -239,6 +259,13 @@ already spread into another by import (e.g. edit `AGENTS.md` where `CLAUDE.md`
 only import it), say so here, so user not surprised later that only one file
 changed. This is real, visible, shared-convention edit — it get confirmed out
 loud, no assume.
+
+If Phase 1 chose **Replace it** for an overlapping skill/tool, give that its
+own named line too: exact path(s) that get overwritten, and confirmation that
+content comes from `assets/dev-changelog/` verbatim (adapted to settled
+answers), not merged with what was there before. Overwriting another skill's
+file is exactly the kind of edit that needs stated, out-loud confirmation —
+never bundle it silently into another line.
 
 ## Phase 3 — Execute
 
@@ -376,6 +403,14 @@ create these files need to, on every create-or-update:
 
 Edit that skill own instructions file and template direct — no build parallel
 mechanism next to it.
+
+**Overlapping skill/tool marked Replace in Phase 1**: instead of editing its
+existing logic in place, overwrite its file(s) — at the exact directory and
+name confirmed in Phase 1 — with `assets/dev-changelog/SKILL.md` and
+`changelog-template.md`, adapted the same way Scenario A adapts them below
+(name, directory, filename convention, template shape, trigger philosophy).
+One canonical source (`assets/`) replaces the old bespoke logic; do not keep
+both or hand-merge the two.
 
 **Scenario A**: no existing skill to edit — bootstrap one from bundled generic
 template at `assets/dev-changelog/` (`SKILL.md` + `changelog-template.md`),
