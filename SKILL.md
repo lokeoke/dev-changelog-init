@@ -56,10 +56,11 @@ If detection finds more than one changelog convention or changelog directory
 which one to target, or whether to set up per-package indexes; do not silently
 pick one.
 
-No assume anything from reference build carry over. Dig into six areas: the
+No assume anything from reference build carry over. Dig into seven areas: the
 changelog convention itself (if any), any overlapping skill/tool, the entry
-file format, the scripting toolchain, the trigger mechanism, and top-level
-agent-instruction file relationships. Read `references/detection.md` now,
+file format, the scripting toolchain, the trigger mechanism, top-level
+agent-instruction file relationships, and static analysis tooling. Read
+`references/detection.md` now,
 before proceeding — it has the exact grep targets and edge-case handling
 (multi-convention repos, non-Markdown format, missing YAML parser, competing
 trigger systems, overlap vs. Partial classification) for each area; skipping
@@ -337,7 +338,7 @@ past:
   command that no exist in this repo.
 - `parseTitle()` heading-shape assumption (`# {ISSUE}-{NUMBER} {Title}`,
   first space-delimited token stripped as id) is exactly Phase 1 Scenario A
-  question 3 H1 answer. In Scenario B/C this already validated against
+  question 2 H1 answer. In Scenario B/C this already validated against
   existing template; in Scenario A you choose it fresh — if it anything other
   than "first token is id, rest is title," rewrite this function logic, no
   leave mismatch in place.
