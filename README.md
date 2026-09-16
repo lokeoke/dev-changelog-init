@@ -51,9 +51,9 @@ Any tracker, or none, works. The `.mjs` reference scripts need adapting
 | --- | --- |
 | `SKILL.md` | Interactive setup and verification workflow. |
 | `assets/dev-changelog/SKILL.md` | Post-commit entry creation/update workflow. |
-| `assets/dev-changelog/changelog-template.md` | Entry template with frontmatter. |
-| `assets/rebuild-changelog-index.reference.mjs` | Deterministic index generator reference. |
-| `assets/search-changelog.reference.mjs` | Index-only path/tag/title search reference. |
+| `assets/dev-changelog/dev-changelog-template.md` | Entry template with frontmatter. |
+| `assets/rebuild-dev-changelog-index.reference.mjs` | Deterministic index generator reference. |
+| `assets/search-dev-changelog.reference.mjs` | Index-only path/tag/title search reference. |
 
 ## License
 
