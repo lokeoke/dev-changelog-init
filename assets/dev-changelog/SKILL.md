@@ -100,7 +100,7 @@ not ask again once a matching file exists.
      stays true — don't just append a correction below it.
 
 6. Preserve the template shape and fill the frontmatter.
-   - Use `changelog-template.md` (bundled alongside this file) for new files.
+   - Use `dev-changelog-template.md` (bundled alongside this file) for new files.
    - Keep the frontmatter block and these three sections exactly:
      - `## Goal of these changes`
      - `## Problems during implementation`

@@ -33,7 +33,7 @@ function main() {
   const args = process.argv.slice(2);
 
   if (!existsSync(INDEX_PATH)) {
-    console.error("search:changelog: index not found."); // ADAPT: path in message
+    console.error("search:dev-changelog: index not found."); // ADAPT: path in message
     console.error("Run the rebuild script first."); // ADAPT: actual command name
     process.exit(1); // usage/setup error — the only case that exits non-zero
   }
@@ -56,7 +56,7 @@ function main() {
 
   const query = args.join(" ").trim();
   if (!query) {
-    console.error("search:changelog: usage: <run> -- <path-or-tag>");
+    console.error("search:dev-changelog: usage: <run> -- <path-or-tag>");
     console.error("                   <run> -- --tags");
     process.exit(1);
   }

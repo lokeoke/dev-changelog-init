@@ -70,9 +70,14 @@ No assume anything from reference build carry over. Dig:
 - **Any overlapping skill or tool.** Widen the same grep beyond "changelog"
   naming — a prior journal, dev-log, or memory-keeping skill/tool may cover
   the same job under its own name and directory. Do not assume what it is
-  called or where it lives. If detection finds a candidate, note its name and
-  path here as evidence only; Phase 1 asks the user to confirm or supply both
-  before deciding whether to replace it.
+  called or where it lives. This is a genuinely separate tool, never the same
+  convention just classified above under a different name — a partially-wired
+  changelog system that happens not to say "changelog" anywhere is a Partial
+  finding above, not an overlapping tool here; the two classifications are
+  mutually exclusive for the same file(s). If detection finds a candidate
+  distinct from whatever was classified above, note its name and path here as
+  evidence only; Phase 1 asks the user to confirm or supply both before
+  deciding whether to replace it.
 - **The changelog file format**, if convention exist. Confirm entries are
   Markdown (or other format that support `---`-delimited frontmatter block and
   `# ` heading) before assume Phases 1-3 apply as written — non-Markdown format
@@ -185,7 +190,7 @@ field names to match what really found, not what written here.
 3. **Template sections + heading shape** — default to three validated sections
    (`## Goal of these changes` / `## Problems during implementation` /
    `## Resolution of problems`) plus `# {ISSUE}-{NUMBER} {Title}` H1 (matches
-   bundled `assets/dev-changelog/changelog-template.md` — first token before
+   bundled `assets/dev-changelog/dev-changelog-template.md` — first token before
    the space is the id, no internal space, whether that id is issue-id-only or
    issue-id-plus-sequence-number). **This answer is hard dependency for Phase
    3.3**: rebuild script title parser assume H1 first token (up to first
@@ -230,9 +235,13 @@ missing) from the Phase 3 checklist and ask which path:
 the user to confirm or supply its exact directory and name, then whether to:
 
 1. **Replace it** — its file(s) get overwritten with the bundled generic
-   asset (`assets/dev-changelog/SKILL.md` + `changelog-template.md`, adapted
-   to whatever Phase 1 settled above) instead of hand-merged with its
-   existing logic.
+   asset (`assets/dev-changelog/SKILL.md` + `dev-changelog-template.md`). If the
+   overall classification above is Scenario A, adapt using the four answers
+   already gathered there. Otherwise (Scenario B/C/Partial, where Scenario
+   A's four questions were never asked) ask them now, scoped to this
+   replacement: filename convention, template sections + heading shape, and
+   trigger philosophy — name and directory are already settled by the
+   question just above. Never invent these from the bundled defaults.
 2. **Leave it as-is** — treat it as the Scenario B/C convention found in
    Phase 0 and edit it in place per Phase 3.4 instead.
 
@@ -345,14 +354,14 @@ Same contract whatever implementation language:
    on real usage error (missing index, no query) — "no matches" is legit answer,
    no failure, and should exit 0.
 
-Reference implementations in `assets/` (`rebuild-changelog-index.reference.mjs`,
-`search-changelog.reference.mjs`) are working, lint-clean Node/ESM code from
+Reference implementations in `assets/` (`rebuild-dev-changelog-index.reference.mjs`,
+`search-dev-changelog.reference.mjs`) are working, lint-clean Node/ESM code from
 original build — copy and adapt paths/field names if target repo Node-based;
 else treat them as spec to rebuild in repo own language. Every line that need
 adapting is marked `// ADAPT: ...`. Two things to check out loud, no just skim
 past:
 
-- Generated `INDEX.md` text in `rebuild-changelog-index.reference.mjs` name
+- Generated `INDEX.md` text in `rebuild-dev-changelog-index.reference.mjs` name
   task-runner command **three separate times** in that string block; adapt all
   three, not just first, or generated doc will forever tell readers to run
   command that no exist in this repo.
@@ -366,7 +375,7 @@ past:
 Wire scripts into whatever task runner repo really use (`package.json` scripts,
 `Makefile`, `justfile`), follow that repo own existing naming convention for
 tasks — no invent new naming scheme. If repo have none of three, plain
-documented shell command (e.g. `node scripts/rebuild-changelog-index.mjs`) is
+documented shell command (e.g. `node scripts/rebuild-dev-changelog-index.mjs`) is
 fine fallback — no invent task-runner config just for this.
 
 **Lint/static-analysis notes** (from original build, hit by SonarQube quality
@@ -407,13 +416,16 @@ mechanism next to it.
 **Overlapping skill/tool marked Replace in Phase 1**: instead of editing its
 existing logic in place, overwrite its file(s) — at the exact directory and
 name confirmed in Phase 1 — with `assets/dev-changelog/SKILL.md` and
-`changelog-template.md`, adapted the same way Scenario A adapts them below
-(name, directory, filename convention, template shape, trigger philosophy).
-One canonical source (`assets/`) replaces the old bespoke logic; do not keep
-both or hand-merge the two.
+`dev-changelog-template.md`, adapted per whatever Phase 1 settled for this
+replacement specifically (filename convention, template shape, trigger
+philosophy — asked fresh there if the overall scenario was not A). One
+canonical source (`assets/`) replaces the old bespoke logic; do not keep both
+or hand-merge the two. Also grep the repo's top-level docs for the replaced
+tool's old name and update or remove any line that still describes its old
+behavior, the same way 3.5a keeps top-level docs accurate for this skill.
 
 **Scenario A**: no existing skill to edit — bootstrap one from bundled generic
-template at `assets/dev-changelog/` (`SKILL.md` + `changelog-template.md`),
+template at `assets/dev-changelog/` (`SKILL.md` + `dev-changelog-template.md`),
 copy into target repo own skill location (wherever Phase 0 found repo skill
 mechanism live — e.g. `.claude/skills/<name>/`, `.agents/skills/<name>/`, or
 equivalent) and rename/fill with Phase 1 Scenario A answers: name, directory,
@@ -488,8 +500,9 @@ batches can no shatter into near-duplicate tags.
    make no edits by design.
 2. Separately, exercise **changelog-writing skill itself** end to end — make one
    small real (or throwaway-branch) commit and let that skill create or update
-   entry normal way (whether it one just authored in Scenario A or one just
-   edited in Scenario B/Extend) — to confirm it really fill frontmatter and fire
+   entry normal way (whether it one just authored in Scenario A, one just
+   edited in Scenario B/Extend, or one just overwritten via Phase 1's
+   overlap-Replace path) — to confirm it really fill frontmatter and fire
    rebuild automatic. Test only rebuild script direct no prove skill integration
   work; both need check. If the skill does not fill frontmatter or fire the
   rebuild during this test, do not report success — identify the missing
