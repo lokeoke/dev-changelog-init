@@ -13,37 +13,38 @@ same mistakes.
 
 ## When To Use
 
-Use this workflow only after a commit exists, when:
+Use this workflow only after a commit exists, when the user asks for a
+post-commit changelog or implementation notes after commit, a
+commit-creation flow just completed and now needs changelog follow-up, or
+the user asks for PR implementation notes, changelog context, or
+problems/resolutions.
 
-- User asks for a post-commit changelog or implementation notes after commit.
-- A commit-creation flow just completed and now needs changelog follow-up.
-- User asks for PR implementation notes, changelog context, or
-  problems/resolutions.
-- The completed commit is meaningful: it changes behavior, public API, or
-  data schema, or fixes a bug (and does not match the trivial list below).
-
-See "Decide whether to run" below for the single source of truth on when to
-run or skip, including the trivial-change list and the exact skip phrases.
-
-Decide whether to run, in this order, stopping at the first match:
+This is the single source of truth for run/skip, create/update, and
+multi-match decisions. Decide what to do, in this order, stopping at the
+first match:
 
 1. No commit exists yet → do not run.
 2. This is a commit-message-only step → do not run.
 3. User said "skip changelog" / "no changelog" / "commit only" → do not run.
-4. Change is trivial: formatting-only, typo-only, lockfile-only,
-   generated-only, or pure metadata noise (changes only to `.gitignore`,
-   editor config, badge URLs, or non-functional comments) → do not run.
-5. No changelog file exists yet for this issue → ask before creating (see
+4. Change is trivial → do not run. Trivial includes: formatting-only,
+   typo-only, lockfile-only, generated-only, pure metadata noise (changes
+   only to `.gitignore`, editor config, badge URLs, or non-functional
+   comments), refactors with no behavior change, and test-only additions.
+   Dependency version bumps that affect runtime behavior are not trivial.
+5. The completed commit is meaningful: it changes behavior, public API, or
+   data schema, or fixes a bug (and did not match step 4) → continue below.
+6. No changelog file exists yet for this issue → ask before creating (see
    Workflow step 4).
-6. A changelog file already exists for this issue → update it automatically
+7. A changelog file already exists for this issue → update it automatically
    (see Workflow step 5).
+8. Multiple changelog files match this issue → prefer the one already
+   changed in the working tree; otherwise ask which one to update (see
+  Workflow step 3). If more than one matching file was changed in the
+  working tree, ask which one to update. Do not ask again once a matching
+  file exists.
 
-## Core Rule
-
-See "Decide whether to run" above for when to create vs. update. If multiple
-matching files create ambiguity, resolve per Workflow step 3 (prefer the one
-already changed in the working tree; otherwise ask which one to update). Do
-not ask again once a matching file exists.
+If the user specifies a different commit or commit range, use that commit
+instead of HEAD for all `git show` commands in this workflow.
 
 ## Workflow
 
@@ -54,11 +55,15 @@ not ask again once a matching file exists.
    - If HEAD does not resolve or these git commands fail (no commits, not a
      repo), stop and report that no commit exists to document rather than
      proceeding.
+   - If HEAD is a merge commit, use `git show --stat -m HEAD` or diff
+     against the merge base to determine changed files.
 
 2. Detect issue or PR identity.
    - Prefer active PR data when available: number, title, body, base/head
      branch (`gh pr view --json number,title,body,headRefName,baseRefName`
      when `gh` is available and a PR exists for this branch).
+   - If `gh` is unavailable or the command errors, treat it the same as no
+     PR data and fall back to `git branch --show-current`.
    - Otherwise use `git branch --show-current`.
    - If `git branch --show-current` returns empty (detached HEAD) and no PR
      data is available, skip straight to the fallback identity below and
@@ -78,7 +83,8 @@ not ask again once a matching file exists.
    - Check staged/unstaged changelog files: `git status --short <CHANGELOG_DIR>`.
    - Match `{issue}-*.md`.
    - If multiple matches exist, prefer one already changed in the working
-     tree; otherwise ask which one to update.
+     tree; otherwise ask which one to update. If more than one matching file
+     was changed in the working tree, ask which one to update.
    - If `<CHANGELOG_DIR>` does not exist, create the directory when creating
      the first changelog file.
 
@@ -92,6 +98,9 @@ not ask again once a matching file exists.
    - If the user declines, do not create a changelog for this commit and
      report it as skipped by user choice. Do not re-prompt for subsequent
      commits on the same branch unless the user re-requests a changelog.
+     This decline applies for the remainder of the current branch's
+     lifetime; if the branch is later merged and reused, or a new session
+     begins, treat it as a fresh decision.
 
 5. Update an existing changelog without prompting.
    - Refine the existing sections instead of appending date-stamped mini-logs.
@@ -101,6 +110,8 @@ not ask again once a matching file exists.
 
 6. Preserve the template shape and fill the frontmatter.
    - Use `dev-changelog-template.md` (bundled alongside this file) for new files.
+     If this template file is missing, stop and report that the template
+     file could not be found rather than fabricating a structure.
    - Keep the frontmatter block and these three sections exactly:
      - `## Goal of these changes`
      - `## Problems during implementation`
@@ -143,6 +154,9 @@ not ask again once a matching file exists.
      drifts from the file it was just generated from. If that command is
      absent or fails, report that the index may be stale and that manual
      regeneration is needed, instead of silently proceeding.
+   - If `INDEX.md` was just created in this same run and has no rebuild
+     command yet, skip the rebuild step and note that `INDEX.md` needs a
+     rebuild command added.
    - Post-commit changelog changes remain unstaged unless explicitly asked to
      stage, amend, or create a follow-up docs commit.
    - Never stage unrelated files.
