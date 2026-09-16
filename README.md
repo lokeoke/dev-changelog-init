@@ -1,34 +1,24 @@
 # dev-changelog-init
 
-VS Code agent skill for setting up a searchable, per-issue development
-changelog. It either bootstraps a convention, adds indexing to an existing one,
-or verifies a partially configured system.
+Agent skill that sets up a searchable, per-issue changelog: bootstraps a
+convention from scratch, adds an index to one that already exists, or
+verifies a partial setup.
 
 ## Why
 
-Per-issue changelog files become hard to use as they grow:
-
-- no metadata means past work cannot be filtered quickly;
-- no generated index means agents must scan every entry; and
-- no discovery pointer means a useful index is easily missed.
-
-This skill addresses all three without assuming a tracker, language, task
-runner, or repository layout.
+Per-issue changelog files get hard to use as they grow: no metadata to
+filter by, no generated index, no discovery pointer. This skill fixes all
+three — tracker-, language-, and task-runner-agnostic.
 
 ## What it sets up
 
-- Markdown frontmatter: `issue`, `date`, `paths`, and `tags`
+- Frontmatter: `issue`, `date`, `paths`, `tags`
 - Generated, deterministic `INDEX.md`
-- Rebuild and search scripts adapted to the target repository toolchain
-- A post-commit changelog-writing skill or an update to the existing process
-- Narrow discovery/trigger pointers in existing agent documentation
-
-`date` remains the entry creation date. `paths` and `tags` are extended over
-later updates, keeping history searchable without rewriting its chronology.
+- Rebuild/search scripts adapted to the repo's toolchain
+- A post-commit changelog-writing skill (or an update to the existing one)
+- Discovery/trigger pointers in existing agent docs
 
 ## Install
-
-Keep the directory intact in a supported skill location:
 
 ```text
 .agents/skills/dev-changelog-init/
@@ -36,40 +26,24 @@ Keep the directory intact in a supported skill location:
   assets/
 ```
 
-Other supported locations include `.github/skills/dev-changelog-init/` and
-`.claude/skills/dev-changelog-init/`. The assets are required: they provide the
-generic changelog-writing skill, entry template, and Node/ESM reference scripts.
+Also works under `.github/skills/` or `.claude/skills/`. `assets/` is
+required — it holds the generic changelog-writing skill, entry template,
+and reference scripts.
 
 ## Use
 
-Ask an agent to add a changelog, index an existing changelog, make changelogs
-searchable, or retrofit a `repo-changelog`-style process. Optionally provide:
+Ask an agent to add, index, or search a changelog, or retrofit an existing
+changelog-tracking process. Optionally give a changelog directory, or
+`skip backfill`.
 
-- a likely changelog directory; or
-- `skip backfill` to select tooling-only lazy backfill when an existing
-  convention is detected.
-
-The skill deliberately uses four phases:
-
-1. **Detect** — inspect existing conventions, tooling, documentation, and Git
-   history without changing files.
-2. **Ask** — collect only details detection cannot establish.
-3. **Plan and confirm** — show exact edits and require explicit approval.
-4. **Execute and verify** — implement only approved changes, then test index
-   regeneration, search behavior, integration, and repository quality gates.
-
-No files change before the explicit Phase 2 confirmation.
+Four phases, confirmed before any file changes: **Detect → Ask → Plan &
+confirm → Execute & verify**.
 
 ## Compatibility
 
-The target changelog must use Markdown entries capable of `---`-delimited
-frontmatter and `#` headings. GitHub Issues, Jira, Linear, custom IDs, and no
-tracker are supported. Non-Markdown changelogs require a separate migration
-decision.
-
-The included `.mjs` files are reference implementations, not universal drop-in
-scripts. Adapt every line marked `// ADAPT:` to the target repository, including
-paths, YAML parsing, title format, and task-runner command names.
+Entries must be Markdown with `---`-delimited frontmatter and `#` headings.
+Any tracker, or none, works. The `.mjs` reference scripts need adapting
+(`// ADAPT:` markers) — not drop-in.
 
 ## Included assets
 
@@ -83,4 +57,4 @@ paths, YAML parsing, title format, and task-runner command names.
 
 ## License
 
-Released under the **MIT License**.
+MIT.
