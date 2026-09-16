@@ -56,73 +56,15 @@ If detection finds more than one changelog convention or changelog directory
 which one to target, or whether to set up per-package indexes; do not silently
 pick one.
 
-No assume anything from reference build carry over. Dig:
-
-- **The changelog convention itself, if any.** Find skill/process that write
-  per-issue changelog files (grep `.claude/skills/`, `.agents/skills/`,
-  `.github/prompts/`, or ask user). If found, read its filename pattern
-  (issue-id format, sequence numbering — e.g. `PROJ-18-003-slug.md` for a
-  Jira/Linear-style key, `42-003-slug.md` for a bare GitHub Issue number, or
-  `YYYY-MM-DD-slug.md` when there is no tracker), its required section
-  headings, and whether any frontmatter already there. No tracker is
-  privileged — GitHub Issues, Jira, Linear, or none at all are all valid
-  starting points; adapt to whatever this repo actually uses.
-- **Any overlapping skill or tool.** Widen the same grep beyond "changelog"
-  naming — a prior journal, dev-log, or memory-keeping skill/tool may cover
-  the same job under its own name and directory. Do not assume what it is
-  called or where it lives. This is a genuinely separate tool, never the same
-  convention just classified above under a different name — a partially-wired
-  changelog system that happens not to say "changelog" anywhere is a Partial
-  finding above, not an overlapping tool here; the two classifications are
-  mutually exclusive for the same file(s). If detection finds a candidate
-  distinct from whatever was classified above, note its name and path here as
-  evidence only; Phase 1 asks the user to confirm or supply both before
-  deciding whether to replace it.
-- **The changelog file format**, if convention exist. Confirm entries are
-  Markdown (or other format that support `---`-delimited frontmatter block and
-  `# ` heading) before assume Phases 1-3 apply as written — non-Markdown format
-  (plain text, JSON, database of entries) need whole different frontmatter
-  mechanism. If the changelog format is non-Markdown, do not proceed with
-  Phases 1-3 as written. Stop, report that this skill supports only
-  frontmatter-capable Markdown entries, and ask the user whether to convert
-  entries to Markdown or abort.
-- **The scripting toolchain.** Package manager if JS/Node repo
-  (npm/pnpm/yarn/bun/none), or equivalent for whatever language repo really use
-  (pip/poetry, cargo, go.mod, bundler, etc.) — no default to Node. Module system
-  (ESM `.mjs`, CJS, TypeScript, or non-JS language whole), existing `scripts/`
-  conventions (arg-parsing style, error/exit conventions, task-naming pattern),
-  and whether YAML parser dependency already there (reuse it; no add new
-  dependency if equivalent already there — check `yaml`, `js-yaml`, or language
-  stdlib). If no YAML parser exists and none can be reused, surface this in
-  Phase 2 as a required new dependency and get explicit confirmation before
-  adding it, or fall back to parsing only the fixed known fields with simple
-  line-based logic. If line-based parsing cannot reliably handle the required
-  fields and the user declines the new dependency, stop and report that the
-  skill cannot be safely implemented without a YAML parser, and ask the user
-  how to proceed.
-- **The trigger mechanism.** This is fact to settle here, not preference to ask
-  later. Does repo have path-scoped agent-instructions system (e.g.
-  `.github/instructions/*.instructions.md` with `applyTo`/`paths` frontmatter,
-  `.cursor/rules/`, `.clinerules/`, Windsurf rules) or only single always-loaded
-  file (`CLAUDE.md`, `AGENTS.md`, `.cursorrules`)? If path-scoped system exist,
-  also settle *which specific files* would carry pointer (narrow-scoped files
-  whose area cluster changelog history, skip wildcard/near-wildcard ones — see
-  Phase 3.5b). Only push this to Phase 1 question if truly unclear: competing
-  systems found at once, or no dominant candidate among several path-scoped
-  options.
-- **Top-level agent-instruction files and their relationships.** List every
-  always-loaded file present (`CLAUDE.md`, `AGENTS.md`, `.cursorrules`,
-  Copilot-specific conventions file like `copilot-instructions.md`, etc.) and
-  spot import/inclusion directives between them — e.g. Claude Code `@path`
-  import syntax inside `CLAUDE.md` pull in `AGENTS.md` and/or Copilot
-  conventions file, or documented prose delegation ("detailed rules live in X,
-  don't duplicate here"). This map is what stop duplicate of same line into file
-  whose content already flow into another by import — Phase 3.5a edit file that
-  own content, not every file that happen to load it.
-- **Static analysis.** Is SonarQube, strict ESLint config, or similar wired into
-  CI? If yes, reference scripts in `assets/` already written to pass common
-  findings this hit in original build (see "Lint/static-analysis notes" under
-  Phase 3.3) — keep those patterns when adapt them.
+No assume anything from reference build carry over. Dig into six areas: the
+changelog convention itself (if any), any overlapping skill/tool, the entry
+file format, the scripting toolchain, the trigger mechanism, and top-level
+agent-instruction file relationships. Read `references/detection.md` now,
+before proceeding — it has the exact grep targets and edge-case handling
+(multi-convention repos, non-Markdown format, missing YAML parser, competing
+trigger systems, overlap vs. Partial classification) for each area; skipping
+it risks missing a genuinely separate overlapping tool or a non-Markdown
+format that changes everything downstream.
 
 ### Classify the scenario
 
@@ -187,23 +129,32 @@ detailed prose below each scenario gives the exact wording and defaults.
 
 | Scenario | Overlap found in Phase 0? | Base questions to ask | If user later answers Replace | If user later answers Leave |
 | --- | --- | --- | --- | --- |
-| A | No | Q1 Name+directory, Q2 Filename convention, Q3 Template sections+heading shape, Q4 Trigger philosophy (+ skill location if unknown) | n/a | n/a |
-| A | Yes | Q1-Q4 above, plus overlap confirm-name/directory question, plus Replace-or-Leave question | No extra questions — reuse the Q1-Q4 answers already gathered | No extra questions — treat overlap as the Scenario A/B/C convention in Phase 3.4 |
+| A | No | Name+directory default (silent, confirmed at Phase 2 plan gate — see below), Q1 Filename convention, Q2 Template sections+heading shape, Q3 Trigger philosophy (+ skill location if unknown) | n/a | n/a |
+| A | Yes | Q1-Q3 above, plus overlap confirm-name/directory question, plus Replace-or-Leave question | No extra questions — reuse the Q1-Q3 answers already gathered | No extra questions — treat overlap as the Scenario A/B/C convention in Phase 3.4 |
 | B | No | Backfill-option question (3 choices); add trigger-mechanism file question only if Phase 0 flagged it unclear | n/a | n/a |
 | B | Yes | Backfill-option question, plus overlap confirm-name/directory question, plus Replace-or-Leave question | Ask filename convention, template sections+heading shape, trigger philosophy (scoped to this replacement only) | No extra questions — edit the overlap in place per Phase 3.4 |
 | C / Partial | No | Path-choice question (Verify only / Extend the gap / Rebuild from scratch) | n/a | n/a |
 | C / Partial | Yes | Path-choice question, plus overlap confirm-name/directory question, plus Replace-or-Leave question | Ask filename convention, template sections+heading shape, trigger philosophy (scoped to this replacement only) | No extra questions — edit the overlap in place per Phase 3.4 |
 
-**Scenario A** — four questions, this order:
+**Scenario A** — name + directory settle silent first (below), then three
+questions, this order:
 
-1. **Name + directory** — default `dev-changelog` / `docs/changelog/`; confirm
-   or override.
-2. **Filename convention** — show Phase 0 inferred default (issue-id format +
+**Name + directory** — default `dev-changelog` / `docs/changelog/`, no ask.
+State default in Phase 2 plan for confirm/override there, same gate every
+other answer pass through. Escalate to explicit question here, before Phase
+2, only if Phase 0 detect real conflict: name/directory already used by
+something else, or repo have strong existing naming convention default would
+break (e.g. every skill in repo prefixed `internal-`). If Phase 0 found no
+existing skill mechanism location at all, ask where changelog-writing skill
+should live before bootstrapping — that a location question, not naming
+preference, and cannot default.
+
+1. **Filename convention** — show Phase 0 inferred default (issue-id format +
    sequence numbering) to confirm/override; if nothing inferred, ask
    issue-id-based vs. date-based vs. free-text-prefix from scratch. Issue-id
    form works the same whether that id comes from Jira, Linear, GitHub Issues,
    or any other tracker — it just a string this repo already use to name work.
-3. **Template sections + heading shape** — default to three validated sections
+2. **Template sections + heading shape** — default to three validated sections
    (`## Goal of these changes` / `## Problems during implementation` /
    `## Resolution of problems`) plus `# {ISSUE}-{NUMBER} {Title}` H1 (matches
    bundled `assets/dev-changelog/dev-changelog-template.md` — first token before
@@ -212,14 +163,10 @@ detailed prose below each scenario gives the exact wording and defaults.
    3.3**: rebuild script title parser assume H1 first token (up to first
    space) is the id and rest is title — if this answer change that shape,
    Phase 3.3 must adapt parser too, not just template.
-4. **Trigger philosophy** — default to "ask once whether to create first entry
+3. **Trigger philosophy** — default to "ask once whether to create first entry
    for given issue, then update it automatic on every meaningful commit after,
    no ask again" (bundled template Core Rule — see
    `assets/dev-changelog/SKILL.md`); confirm or override.
-
-If Phase 0 finds no existing skill mechanism location, ask where the
-changelog-writing skill should live before bootstrapping; do not guess a
-location.
 
 No backfill question in this branch — zero old entries, nothing to backfill.
 
@@ -252,9 +199,9 @@ the user to confirm or supply its exact directory and name, then whether to:
 
 1. **Replace it** — its file(s) get overwritten with the bundled generic
    asset (`assets/dev-changelog/SKILL.md` + `dev-changelog-template.md`). If the
-   overall classification above is Scenario A, adapt using the four answers
+   overall classification above is Scenario A, adapt using the three answers
    already gathered there. Otherwise (Scenario B/C/Partial, where Scenario
-   A's four questions were never asked) ask them now, scoped to this
+   A's three questions were never asked) ask them now, scoped to this
    replacement: filename convention, template sections + heading shape, and
    trigger philosophy — name and directory are already settled by the
    question just above. Never invent these from the bundled defaults.
@@ -269,13 +216,18 @@ authorization to overwrite another skill's file.
 
 Merge everything settled in Phases 0-1 — frontmatter schema, index format,
 settled script/task-runner naming, settled trigger-mechanism file list, Scenario
-A four answers or Scenario B backfill choice or Scenario C chosen path — into
-one concrete, scannable plan. Include the Phase 3 checklist table with final
-Done/Missing state and planned action for every Missing row. Show it. Get
-explicit yes before Phase 3 touch anything. This gate apply same in all
-scenarios; not optional for any. If the user approves only part of the plan,
-treat unapproved items as excluded from Phase 3 execution and re-confirm the
-reduced plan before proceeding.
+A name+directory default plus three answers, or Scenario B backfill choice, or
+Scenario C chosen path — into one concrete, scannable plan. Include the Phase 3
+checklist table with final Done/Missing state and planned action for every
+Missing row. Show it. Get explicit yes before Phase 3 touch anything. This gate
+apply same in all scenarios; not optional for any. If the user approves only
+part of the plan, treat unapproved items as excluded from Phase 3 execution
+and re-confirm the reduced plan before proceeding.
+
+Scenario A's silently-defaulted name+directory get its one explicit confirm
+chance right here — state it as own line (e.g. "Skill name: `dev-changelog`,
+directory: `docs/changelog/`"), not folded silent into other lines, even
+though no dedicated question raised it earlier.
 
 Give skill-announcement edit (Phase 3.5a) its own named line in this plan — no
 fold it into trigger-mechanism line. Say exactly which file(s) get touched and
@@ -396,26 +348,11 @@ tasks — no invent new naming scheme. If repo have none of three, plain
 documented shell command (e.g. `node scripts/rebuild-dev-changelog-index.mjs`) is
 fine fallback — no invent task-runner config just for this.
 
-**Lint/static-analysis notes** (from original build, hit by SonarQube quality
-gate — keep these patterns if target repo run similar analysis):
-
-- Every `.sort()` call need explicit compare function, even for plain string
-  arrays (`(a, b) => a.localeCompare(b)`) — bare `.sort()` get flagged whatever
-  element type.
-- Dodge two adjacent variable-length regex quantifiers over overlapping
-  character classes (e.g. `\s+` right before `.+`) — flagged as super-linear
-  backtracking risk even when real input always small. Prefer plain string ops
-  (`split`, `startsWith`, `indexOf`, `slice`) over regex for anything like "find
-  heading line, split off first token" — simpler, faster, no flagged.
-- No nested ternaries — pull out to `localeCompare`/an if-chain/named function
-  instead of `a ? b : c ? d : e`.
-- Prefer optional chaining (`frontmatter?.issue`) over `!frontmatter ||
-  !frontmatter.issue`.
-- After rebuild script run, run repo own formatter (Prettier or equivalent)
-  before call output final — formatter may reflow generated table rows (e.g.
-  column alignment), which fine, but if your own hand-written source strings
-  break long inline-code span across line wrap, fix that in generator, no let
-  formatter paper over it.
+**Lint/static-analysis notes** — if Phase 0 flagged CI static analysis
+(SonarQube, strict ESLint, etc.), read `references/lint-notes.md` before
+writing these scripts. It lists patterns the original build's quality gate
+flagged (bare `.sort()`, nested ternaries, adjacent regex quantifiers, and
+more) — keep them if target repo run similar analysis.
 
 ### 3.4 Changelog-writing skill
 
