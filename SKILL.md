@@ -96,7 +96,10 @@ No assume anything from reference build carry over. Dig:
   stdlib). If no YAML parser exists and none can be reused, surface this in
   Phase 2 as a required new dependency and get explicit confirmation before
   adding it, or fall back to parsing only the fixed known fields with simple
-  line-based logic.
+  line-based logic. If line-based parsing cannot reliably handle the required
+  fields and the user declines the new dependency, stop and report that the
+  skill cannot be safely implemented without a YAML parser, and ask the user
+  how to proceed.
 - **The trigger mechanism.** This is fact to settle here, not preference to ask
   later. Does repo have path-scoped agent-instructions system (e.g.
   `.github/instructions/*.instructions.md` with `applyTo`/`paths` frontmatter,
@@ -145,13 +148,14 @@ Repo can have fully wired index and still never mention skill exist anywhere
 human would read first; that still gap, even when everything else Scenario C.
 This apply in all scenarios, not just A/Partial.
 
-Fill this state block during Phase 0: scenario label (A/B/C/Partial), the
+Fill this state block once during Phase 0: scenario label (A/B/C/Partial), the
 Phase 3 checklist table below with Done/Missing per row, the trigger-mechanism
-resolution, and the top-level-file import map. Echo this whole state block
-verbatim at the start of Phase 1, Phase 2, and Phase 3 before doing anything
-else in that phase; do not proceed with a phase until it is restated. Do not
-re-derive scenario logic from memory — copy the block forward instead. Mark each row Done
-or Missing, and add exact detected file/path evidence beside it.
+resolution, and the top-level-file import map. Treat this filled table as the
+single source of record — at the start of Phase 1, Phase 2, and Phase 3,
+reference it by pointer ("per the Phase 0 checklist above") instead of
+retyping it verbatim; do not proceed with a phase until you have re-read it.
+Do not re-derive scenario logic from memory — look up the table instead. Mark
+each row Done or Missing, and add exact detected file/path evidence beside it.
 
 | Phase 3 sub-step | Done/Missing | Evidence / missing action |
 | --- | --- | --- |
@@ -177,6 +181,18 @@ Everything below assume answers to this phase; adapt file paths, language, and
 field names to match what really found, not what written here.
 
 ## Phase 1 — Ask (via `AskUserQuestion`, branches on the Phase 0 classification)
+
+Use this table as the quick-reference map of which questions apply; the
+detailed prose below each scenario gives the exact wording and defaults.
+
+| Scenario | Overlap found in Phase 0? | Base questions to ask | If user later answers Replace | If user later answers Leave |
+| --- | --- | --- | --- | --- |
+| A | No | Q1 Name+directory, Q2 Filename convention, Q3 Template sections+heading shape, Q4 Trigger philosophy (+ skill location if unknown) | n/a | n/a |
+| A | Yes | Q1-Q4 above, plus overlap confirm-name/directory question, plus Replace-or-Leave question | No extra questions — reuse the Q1-Q4 answers already gathered | No extra questions — treat overlap as the Scenario A/B/C convention in Phase 3.4 |
+| B | No | Backfill-option question (3 choices); add trigger-mechanism file question only if Phase 0 flagged it unclear | n/a | n/a |
+| B | Yes | Backfill-option question, plus overlap confirm-name/directory question, plus Replace-or-Leave question | Ask filename convention, template sections+heading shape, trigger philosophy (scoped to this replacement only) | No extra questions — edit the overlap in place per Phase 3.4 |
+| C / Partial | No | Path-choice question (Verify only / Extend the gap / Rebuild from scratch) | n/a | n/a |
+| C / Partial | Yes | Path-choice question, plus overlap confirm-name/directory question, plus Replace-or-Leave question | Ask filename convention, template sections+heading shape, trigger philosophy (scoped to this replacement only) | No extra questions — edit the overlap in place per Phase 3.4 |
 
 **Scenario A** — four questions, this order:
 
@@ -257,7 +273,9 @@ A four answers or Scenario B backfill choice or Scenario C chosen path — into
 one concrete, scannable plan. Include the Phase 3 checklist table with final
 Done/Missing state and planned action for every Missing row. Show it. Get
 explicit yes before Phase 3 touch anything. This gate apply same in all
-scenarios; not optional for any.
+scenarios; not optional for any. If the user approves only part of the plan,
+treat unapproved items as excluded from Phase 3 execution and re-confirm the
+reduced plan before proceeding.
 
 Give skill-announcement edit (Phase 3.5a) its own named line in this plan — no
 fold it into trigger-mechanism line. Say exactly which file(s) get touched and
@@ -311,9 +329,9 @@ tags:
   (`db-migration` vs `migration` vs `schema-change`); hard enum need validation
   machinery not worth it for few dozen to few hundred entries. In Scenario B/C,
   pull starter vocabulary from that repo own existing entries — skim
-  titles/topics, cluster them. Produce between 15 and 25 tags inclusive: if
-  fewer than 15 natural clusters exist, keep only those; if more than 25,
-  merge least-frequent near-duplicates down to exactly 25. In Scenario A, seed small
+  titles/topics, cluster them. Target 15-25 tags. If natural clusters are
+  fewer than 15, use as many as exist (do not invent tags to reach 15). If
+  more than 25, merge least-frequent near-duplicates down to 25. In Scenario A, seed small
   starter vocabulary from Phase 1 answers (repo area, stack) since no existing
   corpus to mine yet, and expect it to grow. No reuse vocabulary list from
   different repo. Write vocabulary as preamble line in generated index (single
@@ -457,8 +475,9 @@ whatever else changed.
 #### 3.5b — Trigger mechanism for the index
 
 - **Path-scoped instructions system**: add entries only for areas that (a)
-  are among the top 3 directory areas by number of changelog entries whose
-  `paths` fall under that area, (b) each have at least 5 entries, and (c) are
+  are among the 3 directory areas with the highest count of changelog entries
+  whose `paths` field references that area, computed repo-wide (in case of
+  ties, include all tied areas), (b) each have at least 5 entries, and (c) are
   not already covered by existing narrow-scoped rule file. Append short "check
   the index before implementing" pointer to existing narrow-scoped rule files
   too — but skip any file whose scope already wildcard/near-wildcard
@@ -497,7 +516,9 @@ batches can no shatter into near-duplicate tags.
 1. Make one throwaway test entry, run rebuild script, confirm it show in index
    right, delete it, rebuild again, confirm it vanish clean (prove regeneration,
    no accumulation). Skip this if Scenario C Verify-only path chosen — that path
-   make no edits by design.
+   make no edits by design. If the test entry does not appear correctly or
+   does not vanish after rebuild, stop, diagnose the rebuild script logic, fix
+   it, and re-run this verification before proceeding to step 2.
 2. Separately, exercise **changelog-writing skill itself** end to end — make one
    small real (or throwaway-branch) commit and let that skill create or update
    entry normal way (whether it one just authored in Scenario A, one just
