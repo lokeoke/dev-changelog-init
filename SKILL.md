@@ -7,8 +7,9 @@ argument-hint: "[path to changelog dir | skip backfill]"
 
 Turn pile of per-issue changelog files — or total absence of one — into thing
 agent can ask before work, not thing it only find by grep git history for
-current branch. Fully self-contained: all it need (include generic template for
-changelog-writing skill it can bootstrap from nothing) ship in `assets/`. Never
+current branch. Fully self-contained: all it need ship in its own directory —
+generic template for changelog-writing skill (it can bootstrap from nothing) and
+reference scripts in `assets/`, detection and lint guidance in `references/`. Never
 assume target repo match one shape; Phase 0 exist because it will vary.
 
 **Two thing this design fix, why both matter:**
@@ -60,12 +61,15 @@ No assume anything from reference build carry over. Dig into seven areas: the
 changelog convention itself (if any), any overlapping skill/tool, the entry
 file format, the scripting toolchain, the trigger mechanism, top-level
 agent-instruction file relationships, and static analysis tooling. Read
-`references/detection.md` now,
+`references/detection.md` (bundled in this skill's own directory) now,
 before proceeding — it has the exact grep targets and edge-case handling
 (multi-convention repos, non-Markdown format, missing YAML parser, competing
 trigger systems, overlap vs. Partial classification) for each area; skipping
 it risks missing a genuinely separate overlapping tool or a non-Markdown
-format that changes everything downstream.
+format that changes everything downstream. If a file under `references/` or
+`assets/` that this skill tells you to read cannot be read, stop before
+Phase 1, report the missing file path, and do not proceed with detection
+from memory.
 
 ### Classify the scenario
 
@@ -99,6 +103,8 @@ resolution, and the top-level-file import map. Treat this filled table as the
 single source of record — at the start of Phase 1, Phase 2, and Phase 3,
 reference it by pointer ("per the Phase 0 checklist above") instead of
 retyping it verbatim; do not proceed with a phase until you have re-read it.
+The one exception is the Phase 2 plan, which must show the table in full
+(see Phase 2) because the user approves from that output alone.
 Do not re-derive scenario logic from memory — look up the table instead. Mark
 each row Done or Missing, and add exact detected file/path evidence beside it.
 
@@ -127,19 +133,29 @@ field names to match what really found, not what written here.
 
 ## Phase 1 — Ask (via `AskUserQuestion`, branches on the Phase 0 classification)
 
-Use this table as the quick-reference map of which questions apply; the
+Use this table as the quick-reference map of which base questions apply; the
 detailed prose below each scenario gives the exact wording and defaults.
 
-| Scenario | Overlap found in Phase 0? | Base questions to ask | If user later answers Replace | If user later answers Leave |
-| --- | --- | --- | --- | --- |
-| A | No | Name+directory default (silent, confirmed at Phase 2 plan gate — see below), Q1 Filename convention, Q2 Template sections+heading shape, Q3 Trigger philosophy (+ skill location if unknown), Q4 Commit `INDEX.md`? | n/a | n/a |
-| A | Yes | Q1-Q4 above, plus overlap confirm-name/directory question, plus Replace-or-Leave question | No extra questions — reuse the Q1-Q4 answers already gathered | No extra questions — treat overlap as the Scenario A/B/C convention in Phase 3.4 |
-| B | No | Backfill-option question (3 choices); add trigger-mechanism file question only if Phase 0 flagged it unclear | n/a | n/a |
-| B | Yes | Backfill-option question, plus overlap confirm-name/directory question, plus Replace-or-Leave question | Ask filename convention, template sections+heading shape, trigger philosophy (scoped to this replacement only) | No extra questions — edit the overlap in place per Phase 3.4 |
-| C / Partial | No | Path-choice question (Verify only / Extend the gap / Rebuild from scratch) | n/a | n/a |
-| C / Partial | Yes | Path-choice question, plus overlap confirm-name/directory question, plus Replace-or-Leave question | Ask filename convention, template sections+heading shape, trigger philosophy (scoped to this replacement only) | No extra questions — edit the overlap in place per Phase 3.4 |
+| Scenario | Base questions to ask |
+| --- | --- |
+| A | Name+directory default (silent, confirmed at Phase 2 plan gate — see below), Q1 Filename convention, Q2 Template sections+heading shape, Q3 Trigger philosophy (+ skill location if unknown), Q4 Commit `INDEX.md`?, Q5 Starter tags |
+| B | Backfill-option question (3 choices); add trigger-mechanism file question only if Phase 0 flagged it unclear |
+| C / Partial | Path-choice question (Verify only / Extend the gap / Rebuild from scratch) |
 
-**Scenario A** — name + directory settle silent first (below), then four
+**Overlap decision table** — the single source for overlap handling. Phases 1,
+2, and 3.4 refer to it by row number; do not restate its conditions elsewhere.
+Applies only if Phase 0 flagged an overlapping skill or tool. In every row,
+first ask the overlap confirm-name/directory question, then the
+Replace-or-Leave question; the last two columns say what follows from the
+answer.
+
+| # | Scenario | If user answers Replace — questions to ask | If user answers Leave — questions to ask |
+| --- | --- | --- | --- |
+| O1 | A | None — reuse the Q1-Q5 answers already gathered | None — treat overlap as the existing convention and edit it in place per Phase 3.4 |
+| O2 | B | Ask filename convention, template sections+heading shape, trigger philosophy (scoped to this replacement only) | None — edit in place per Phase 3.4 |
+| O3 | C / Partial | Same three questions as O2 | None — edit in place per Phase 3.4 |
+
+**Scenario A** — name + directory settle silent first (below), then five
 questions, this order:
 
 **Name + directory** — default `dev-changelog` / `docs/changelog/`, no ask.
@@ -157,6 +173,10 @@ preference, and cannot default.
    issue-id-based vs. date-based vs. free-text-prefix from scratch. Issue-id
    form works the same whether that id comes from Jira, Linear, GitHub Issues,
    or any other tracker — it just a string this repo already use to name work.
+   If the user chooses date-based or free-text-prefix, there is no issue id in
+   the filename: set `issue` to the full filename stem without the date or
+   sequence suffix (or the date string if no other id exists), and state the
+   chosen `issue` derivation in the Phase 2 plan.
 2. **Template sections + heading shape** — default to three validated sections
    (`## Goal of these changes` / `## Problems during implementation` /
    `## Resolution of problems`) plus `# {ISSUE}-{NUMBER} {Title}` H1 (matches
@@ -178,6 +198,13 @@ preference, and cannot default.
    `<CHANGELOG_DIR>/INDEX.md merge=union` to `.gitattributes` (keeps both sides
    on local merges; rebuild after any merge) and keep the generated text free
    of volatile lines (see 3.2).
+5. **Starter tags** — list 5-10 tags for the main repo areas and stack (e.g.
+   `api`, `db`, `frontend`), or confirm an empty starter list. Seeds the
+   starter vocabulary in 3.1.
+
+**Scenario A early-out** — if, at any point (including mid-flow), the user
+confirms the changelog will stay small (see "When NOT to use this"), stop
+without touching any files, report that no index was created, and exit.
 
 No backfill question in this branch — zero old entries, nothing to backfill.
 
@@ -188,11 +215,14 @@ out loud not assumed):
    fully right away.
 2. **Tooling only, lazy backfill** — ship mechanism; old entries stay
    frontmatter-less until they happen to get touched again (rebuild script
-   skip-with-warning behavior make this safe, not broken).
+   skip-with-warning behavior make this safe, not broken). Index row count
+   will then be lower than file count by exactly the skipped files; Phase 4
+   step 4 account for this.
 3. **Tooling now, backfill as a separate follow-up change.**
 
 This is real scope decision — it can be bulk of total diff. Always ask; never
-assume. If `INDEX.md` is already committed, also ask Q4 above (commit or
+assume — the one exception is the `skip backfill` argument (Phase 0), which
+pre-answers this question as option 2, so do not ask it then. If `INDEX.md` is already committed, also ask Q4 above (commit or
 ignore); to migrate, plan one line: `git rm --cached` the index, add it to
 `.gitignore`. Never do this silently. Plus, *only if Phase 0 flag trigger mechanism as unclear*, ask which
 path-scoped file(s) or top-level file should carry it.
@@ -202,7 +232,10 @@ missing) from the Phase 3 checklist. If `INDEX.md` is committed, also offer
 Q4 above as migration (never silent). Ask which path:
 
 1. **Verify only** (recommended default) — run rebuild + search once, confirm
-   output stable/consistent, report any drift, make **zero** file edits.
+   output stable/consistent, report any drift, make **zero** file edits. The
+   rebuild's regeneration of the index does not count as an edit when it leaves
+   the file byte-identical; if it changes the file, report that as drift and
+   restore the prior content instead of keeping the change.
 2. **Extend the gap** — run only specific missing sub-steps Phase 0 already
    listed; nothing else touched.
 3. **Rebuild from scratch** — explicit opt-in only; treat as full Scenario B
@@ -212,15 +245,12 @@ Q4 above as migration (never silent). Ask which path:
 the user to confirm or supply its exact directory and name, then whether to:
 
 1. **Replace it** — its file(s) get overwritten with the bundled generic
-   asset (`assets/dev-changelog/SKILL.md` + `dev-changelog-template.md`). If the
-   overall classification above is Scenario A, adapt using the four answers
-   already gathered there. Otherwise (Scenario B/C/Partial, where Scenario
-   A's four questions were never asked) ask them now, scoped to this
-   replacement: filename convention, template sections + heading shape, and
-   trigger philosophy — name and directory are already settled by the
-   question just above. Never invent these from the bundled defaults.
-2. **Leave it as-is** — treat it as the Scenario B/C convention found in
-   Phase 0 and edit it in place per Phase 3.4 instead.
+   asset (`assets/dev-changelog/SKILL.md` + `dev-changelog-template.md`).
+   Follow the matching row of the overlap decision table above for which
+   questions to ask; name and directory are already settled by the question
+   just above. Never invent answers from the bundled defaults.
+2. **Leave it as-is** — edit it in place per Phase 3.4 (see the overlap
+   decision table above).
 
 Never guess this from a name match alone (e.g. do not assume a skill called
 `journal` or `memory` is safe to replace); the user's answer here is the only
@@ -229,11 +259,19 @@ authorization to overwrite another skill's file.
 ## Phase 2 — Plan & Confirm
 
 Merge everything settled in Phases 0-1 — frontmatter schema, index format,
-settled script/task-runner naming, settled trigger-mechanism file list, committed-vs-ignored `INDEX.md` choice, Scenario
-A name+directory default plus four answers, or Scenario B backfill choice, or
+settled script/task-runner naming, settled trigger-mechanism file list, the
+`issue` derivation rule for non-issue-id filename conventions (Phase 1 Q1), committed-vs-ignored `INDEX.md` choice, Scenario
+A name+directory default plus five answers, or Scenario B backfill choice, or
 Scenario C chosen path — into one concrete, scannable plan. Include the Phase 3
 checklist table with final Done/Missing state and planned action for every
-Missing row. Show it. Get explicit yes before Phase 3 touch anything. This gate
+Missing row. This is the one place the Phase 0 table is reproduced in full
+(updated with final state), not referenced by pointer, since the user approves
+from this output. Give the Phase 4 verification commit its own named line:
+one small commit on the current branch or a throwaway branch, created only
+after explicit approval; state which option will be used. Also give the Phase 4
+step 1 test its own named line: "Verification test: create one throwaway entry in
+`<CHANGELOG_DIR>`, rebuild, then delete it and rebuild again (no net file
+change)." Show it. Get explicit yes before Phase 3 touch anything. This gate
 apply same in all scenarios; not optional for any. If the user approves only
 part of the plan, treat unapproved items as excluded from Phase 3 execution
 and re-confirm the reduced plan before proceeding.
@@ -253,8 +291,8 @@ only import it), say so here, so user not surprised later that only one file
 changed. This is real, visible, shared-convention edit — it get confirmed out
 loud, no assume.
 
-If Phase 1 chose **Replace it** for an overlapping skill/tool, give that its
-own named line too: exact path(s) that get overwritten, and confirmation that
+If Phase 1 chose **Replace it** for an overlapping skill/tool (overlap
+decision table, Phase 1), give that its own named line too: exact path(s) that get overwritten, and confirmation that
 content comes from `assets/dev-changelog/` verbatim (adapted to settled
 answers), not merged with what was there before. Overwriting another skill's
 file is exactly the kind of edit that needs stated, out-loud confirmation —
@@ -281,9 +319,12 @@ tags:
   name stays `issue` regardless of which tracker issued it.
 - `date` — day-granularity, set once at creation from commit that first add file
   (`git log --follow --diff-filter=A --format=%cs -- <file>` or equivalent).
-  Never touched by later in-place updates — it stable sort key, not "last
-  touched" timestamp. If changelog-writing skill refine entry in place across
-  many commits, keep this frozen on purpose.
+  Set only when missing; never touched by later in-place updates — it stable
+  sort key, not "last touched" timestamp. If changelog-writing skill refine entry in place across
+  many commits, keep this frozen on purpose. If the repo has no git history
+  for an entry file, or the git command fails (not a git repo, shallow clone),
+  set `date` from the date in the filename or else the file's last-modified
+  date, set `paths: []`, and report the fallback in the Phase 2 plan.
 - `paths` — files touched, unioned across every commit that ever
   create/update entry (not just creation commit — refinements happen), deduped
   and sorted, exclude changelog directory itself. This is field that really
@@ -298,10 +339,13 @@ tags:
   titles/topics, cluster them. Target 15-25 tags. If natural clusters are
   fewer than 15, use as many as exist (do not invent tags to reach 15). If
   more than 25, merge least-frequent near-duplicates down to 25. In Scenario A, seed small
-  starter vocabulary from Phase 1 answers (repo area, stack) since no existing
+  starter vocabulary from Phase 1 answer Q5 (repo area, stack) since no existing
   corpus to mine yet, and expect it to grow. No reuse vocabulary list from
-  different repo. Vocabulary is whatever tags entries already use — read it with
-  the search script's `--tags` mode (single source, no separate taxonomy file,
+  different repo. Ordering: the search script does not exist until Phase 3.3, so
+  in Scenario B/C build the starter vocabulary by manually skimming existing
+  entry titles before Phase 3.3, and use the search script's `--tags` mode only
+  after Phase 3.3 has run. Once the script exists, vocabulary is whatever tags
+  entries already use — read it with the `--tags` mode (single source, no separate taxonomy file,
   and no shared "known tags" line in the index: two PRs adding different new
   tags would both edit it and conflict). Prefer reuse existing tag over invent
   near-duplicate.
@@ -337,7 +381,8 @@ Same contract whatever implementation language:
 1. **Rebuild** — read every changelog entry frontmatter, skip (with warning, no
    hard fail) any file missing required fields — this is what make
    lazy/incremental backfill safe — and rewrite index file from scratch every
-   run.
+   run. Treat `issue` as required only when Phase 1 Q1 selected an issue-id
+   convention; otherwise require `date` and an `issue` derived per Q1.
 2. **Search** — build rows in memory from entry frontmatter (reuse the rebuild
    script's row collection; never parse `INDEX.md`, which may be gitignored,
    stale, or absent), match query
@@ -375,16 +420,19 @@ fine fallback — no invent task-runner config just for this.
 (SonarQube, strict ESLint, etc.), read `references/lint-notes.md` before
 writing these scripts. It lists patterns the original build's quality gate
 flagged (bare `.sort()`, nested ternaries, adjacent regex quantifiers, and
-more) — keep them if target repo run similar analysis.
+more) — keep them if target repo run similar analysis. If the file cannot be
+read, stop, report its path, and do not write the scripts from memory.
 
 ### 3.4 Changelog-writing skill
 
 **Scenario B / Extend / Rebuild-from-scratch**: whatever skill/process now
 create these files need to, on every create-or-update:
 
-1. Fill/extend frontmatter (issue from what it already parse; date from commit;
-   paths unioned from `git show --name-only`, exclude changelog directory; tags
-   from vocabulary, prefer reuse).
+1. Fill/extend frontmatter (issue from what it already parse; date from commit,
+   set only when missing — see 3.1; paths unioned from `git show --name-only`, exclude changelog directory; tags
+   from vocabulary, prefer reuse). If `git show --name-only` fails or git
+   history is unavailable, set `paths: []` for that entry, leave any existing
+   `paths` values unchanged, and report the fallback to the user.
 2. Never change `date` or `issue` once set, on later in-place updates.
 3. Run rebuild script so index never go stale.
 
@@ -394,9 +442,8 @@ mechanism next to it.
 **Overlapping skill/tool marked Replace in Phase 1**: instead of editing its
 existing logic in place, overwrite its file(s) — at the exact directory and
 name confirmed in Phase 1 — with `assets/dev-changelog/SKILL.md` and
-`dev-changelog-template.md`, adapted per whatever Phase 1 settled for this
-replacement specifically (filename convention, template shape, trigger
-philosophy — asked fresh there if the overall scenario was not A). One
+`dev-changelog-template.md`, adapted per the answers gathered under the
+matching row of the Phase 1 overlap decision table. One
 canonical source (`assets/`) replaces the old bespoke logic; do not keep both
 or hand-merge the two. Also grep the repo's top-level docs for the replaced
 tool's old name and update or remove any line that still describes its old
@@ -423,7 +470,10 @@ same doc.
 
 #### 3.5a — Announce the changelog-writing skill
 
-Apply in **every scenario, always** — unless Phase 0 already found it announced.
+Apply in **every scenario that edits files, always** — unless Phase 0 already
+found it announced. The one exception is Scenario C **Verify only**, which makes
+zero edits: if the announcement is missing there, report it as a gap and offer
+the Extend path instead of editing.
 Using file map from Phase 0, add short, factual line to file(s) that really
 **own** content (not files that merely import it) — name, what it do, where it
 write, and that it post-commit. Same discoverability framing as 3.5b below: state
@@ -434,16 +484,26 @@ whatever else changed.
 
 #### 3.5b — Trigger mechanism for the index
 
-- **Path-scoped instructions system**: add entries only for areas that (a)
-  are among the 3 directory areas with the highest count of changelog entries
-  whose `paths` field references that area, computed repo-wide (in case of
-  ties, include all tied areas), (b) each have at least 5 entries, and (c) are
-  not already covered by existing narrow-scoped rule file. Append short "check
-  the index before implementing" pointer to existing narrow-scoped rule files
-  too — but skip any file whose scope already wildcard/near-wildcard
-  (`applyTo: "**"` or similar). Fire on nearly every edit kill point of
-  path-scoping and bring back "one blanket instruction" problem from opening
-  section.
+- **Path-scoped instructions system**: select areas, then add pointers, in
+  this order:
+  1. Count, repo-wide, the changelog entries per top-level directory (first
+     path segment under the repo root) whose `paths` field includes a file
+     under that directory.
+  2. Keep only directories with at least 5 entries.
+  3. Take the top 3 by count (never more than 3). Break ties at the 3rd-place
+     cutoff by most recent entry `date`, then alphabetically by directory name.
+  4. For each selected area, the pointer is a short discoverability line
+     ("changelog for this area is indexed at X, searchable with Y") — same
+     factual framing as the one-line top-level note defined in the next bullet
+     ("the changelog is indexed at X, searchable with Y"), with no behavioral
+     mandate wording like "always check before implementing".
+     - If an existing narrow-scoped rule file already covers the area, do not
+       create a new entry; append the pointer to that rule file — unless its
+       scope is wildcard/near-wildcard (`applyTo: "**"` or similar), in which
+       case skip it. Fire on nearly every edit kill point of path-scoping and
+       bring back "one blanket instruction" problem from opening section.
+     - If no existing narrow-scoped rule file covers the area, add a new
+       path-scoped entry with the pointer.
 - **Only always-loaded top-level files exist** (`CLAUDE.md`, `AGENTS.md`,
   `.cursorrules`, single `README.md`): add **one line**, framed as
   discoverability note ("the changelog is indexed at X, searchable with Y"), no
@@ -455,18 +515,25 @@ whatever else changed.
 
 Mechanical part only — ask already happened in Phase 1. `issue`/`date`/`paths`
 fully derivable from git history (script it, no hand-transcribe). `tags` need
-content skim per entry against repo-specific vocabulary — for more than handful
-of entries, this is one place in whole skill that truly parallelize: batch
+content skim per entry against repo-specific vocabulary — for more than 10
+entries, this is one place in whole skill that truly parallelize: batch
 entries and classify batches at once (if environment have multi-agent
 orchestration tool, use it here specific — this step, no rest of skill, is
-fan-out-shaped part) instead of read all entries one by one. Keep tag vocabulary
-closed during this pass (agents pick from list, they no invent tags) so parallel
-batches can no shatter into near-duplicate tags.
+fan-out-shaped part) instead of read all entries one by one. Freeze tag
+vocabulary for duration of this pass only — snapshot the starter list from 3.1
+at pass start and ignore later `--tags` output until the pass ends (this
+overrides the `--tags` rule in 3.1 for this pass): batch agents pick from the frozen list
+and do not add tags themselves, so parallel batches can no shatter into
+near-duplicate tags. If an entry fit no listed tag, agent leave it untagged and
+report it back; orchestrator may add one new tag between batches (after check
+for near-duplicate), then re-run for that entry. After pass, normal 3.1 rule
+return: semi-controlled vocabulary, new tags allowed when no existing one fit.
 
 ### 3.7 Scenario C / Partial paths
 
 - **Verify only**: run rebuild + search once, confirm output stable/consistent,
-  report drift if any. No file edits.
+  report drift if any. No file edits (a byte-identical index regeneration is
+  not an edit; if rebuild changes the index, report drift and restore it).
 - **Extend the gap**: run only listed missing sub-steps from Phase 0 Partial
   report — nothing else touched.
 - **Rebuild from scratch**: run full 3.1-3.6 path as if Scenario B.
@@ -475,12 +542,15 @@ batches can no shatter into near-duplicate tags.
 
 1. Make one throwaway test entry, run rebuild script, confirm it show in index
    right, delete it, rebuild again, confirm it vanish clean (prove regeneration,
-   no accumulation). Skip this if Scenario C Verify-only path chosen — that path
-   make no edits by design. If the test entry does not appear correctly or
+   no accumulation). Skip this step and step 2 if Scenario C Verify-only path
+   chosen — that path make no edits by design. If the test entry does not appear correctly or
    does not vanish after rebuild, stop, diagnose the rebuild script logic, fix
-   it, and re-run this verification before proceeding to step 2.
-2. Separately, exercise **changelog-writing skill itself** end to end — make one
-   small real (or throwaway-branch) commit and let that skill create or update
+   it, and re-run this verification before proceeding to step 2. If a fix to
+   the rebuild script or skill wiring is needed, stop and get explicit user
+   approval before editing.
+2. Unless Verify-only, separately exercise **changelog-writing skill itself** end to end — make one
+   small real (or throwaway-branch) commit — do not create it unless the
+   Phase 2 plan included it — and let that skill create or update
    entry normal way (whether it one just authored in Scenario A, one just
    edited in Scenario B/Extend, or one just overwritten via Phase 1's
    overlap-Replace path) — to confirm it really fill frontmatter and fire
@@ -490,8 +560,17 @@ batches can no shatter into near-duplicate tags.
   wiring, fix it, and re-run the end-to-end test before completing.
 3. Search by known path and known tag from real entry; confirm nonsense query
    give clean "no matches" and exit 0.
-4. Run repo own lint/format/test gate. If backfilling, confirm index entry count
-   match changelog directory file count.
+4. Run repo own lint/format/test gate. If Scenario A was chosen (no backfill),
+   confirm the index contains zero rows and the changelog directory contains
+   no entries (the test entry from step 1 was removed). If full backfill was chosen, confirm
+   index entry count match changelog directory file count. If lazy or
+   follow-up backfill was chosen, confirm instead that index entry count plus
+   the number of files the rebuild script warned about and skipped equals the
+   changelog directory file count. If the path is Scenario C Verify-only or
+   Extend the gap and no backfill was chosen, confirm index entry count plus
+   the number of files the rebuild script warned about and skipped equals the
+   changelog directory file count. If the path is Scenario C Extend the gap and
+   entries lack frontmatter, treat it as lazy backfill for count purposes.
 5. If repo run static analysis in CI, confirm new scripts pass it — no wait for
    CI round-trip to find out; check local if there way to (equivalent linter, or
    read specific rules that commonly fire, see notes in Phase 3.3).

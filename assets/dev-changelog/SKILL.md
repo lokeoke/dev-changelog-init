@@ -11,6 +11,9 @@ after a commit has already been created. These files preserve goal, problems,
 and resolutions for the current PR/branch so future work avoids repeating the
 same mistakes.
 
+Set `<CHANGELOG_DIR>` to the repo's changelog directory (for example
+`docs/changelog`). If it is not configured, stop and ask the user for the path.
+
 ## When To Use
 
 Use this workflow only after a commit exists, when the user asks for a
@@ -35,27 +38,26 @@ first match:
    data schema, or fixes a bug (and did not match step 4) → continue below.
 6. No changelog file exists yet for this issue → ask before creating (see
    Workflow step 4).
-7. A changelog file already exists for this issue → update it automatically
+7. Multiple changelog files match this issue → follow Workflow step 3.
+8. Exactly one changelog file matches this issue → update it automatically
    (see Workflow step 5).
-8. Multiple changelog files match this issue → prefer the one already
-   changed in the working tree; otherwise ask which one to update (see
-  Workflow step 3). If more than one matching file was changed in the
-  working tree, ask which one to update. Do not ask again once a matching
-  file exists.
 
-If the user specifies a different commit or commit range, use that commit
-instead of HEAD for all `git show` commands in this workflow.
+The target commit is HEAD by default. If the user specifies a different single
+commit, use that commit as `<COMMIT>` instead of HEAD for every git command in
+this workflow, including the `date` and `paths` frontmatter. If the user
+specifies a commit range, ask the user to name one commit before continuing.
 
 ## Workflow
 
 1. Inspect the completed commit.
-   - `git show --stat --oneline HEAD` and `git show --name-only HEAD` as
-     source of truth. `git show HEAD` when implementation detail is needed.
+   - `git show --stat --oneline <COMMIT>` and `git show --name-only <COMMIT>`
+     as source of truth (`<COMMIT>` is HEAD unless the user specified one).
+     `git show <COMMIT>` when implementation detail is needed.
    - Ignore unrelated working-tree changes unless asked to include them.
-   - If HEAD does not resolve or these git commands fail (no commits, not a
-     repo), stop and report that no commit exists to document rather than
-     proceeding.
-   - If HEAD is a merge commit, use `git show --stat -m HEAD` or diff
+   - If `<COMMIT>` does not resolve or these git commands fail (no commits,
+     not a repo), stop and report that no commit exists to document rather
+     than proceeding.
+   - If `<COMMIT>` is a merge commit, use `git show --stat -m <COMMIT>` or diff
      against the merge base to determine changed files.
 
 2. Detect issue or PR identity.
@@ -73,23 +75,32 @@ instead of HEAD for all `git show` commands in this workflow.
         Jira/Linear-style trackers.
      2. For GitHub Issues: a closing keyword in the PR body (`Fixes #42`,
         `Closes #42`, `Resolves #42`), else a bare `#42` in the PR title,
-        else a leading/embedded number in the branch name (`42-short-name`,
-        `issue-42`, `gh-42`).
-   - If no id is found anywhere, use a fallback identity (e.g. `MISC`, or
-     whatever no-issue convention this repo already uses).
+        else a number that directly follows `issue-` or `gh-`, or that is the
+        leading token of the branch name (e.g. `42-short-name`, `issue-42`,
+        `gh-42`). Ignore other numbers (versions like `v2`, dates, `2fa`).
+   - If no id is found anywhere, use `MISC` as the issue id. Do not invent
+     other fallback names.
 
 3. Find a matching changelog file.
-   - Check files changed on the branch under `<CHANGELOG_DIR>`.
+   - Check changelog files changed on the branch with
+     `git diff --name-only <BASE>...HEAD -- <CHANGELOG_DIR>`, where `<BASE>`
+     is the PR base branch (`baseRefName`) or the default branch when no PR
+     data exists.
    - Check staged/unstaged changelog files: `git status --short <CHANGELOG_DIR>`.
    - Match `{issue}-*.md`.
-   - If multiple matches exist, prefer one already changed in the working
-     tree; otherwise ask which one to update. If more than one matching file
-     was changed in the working tree, ask which one to update.
+   - If multiple matches exist: use the single one already changed in the
+     working tree; if none or more than one is changed in the working tree,
+     ask which one to update. Once a single file is selected (or only one
+     match exists), do not ask again.
    - If `<CHANGELOG_DIR>` does not exist, create the directory when creating
      the first changelog file.
 
 4. Create the first changelog only after confirmation.
-   - Ask: `No changelog found for {issue}. Add one to this commit?`
+   - Ask: `No changelog found for {issue}. Create one for this commit?`
+     (the file is saved unstaged unless the user also asks to stage, amend,
+     or create a follow-up docs commit).
+   - If no user response is possible (non-interactive run), do not create a
+     changelog. Report it as skipped pending user confirmation.
    - If yes, create `<CHANGELOG_DIR>/{issue}-{number}-{short-summary}.md`.
    - `{number}`: scan existing files matching `{issue}-NNN-*.md`; take the
      highest `NNN` for this issue, add one, and zero-pad to 3 digits. Use
@@ -119,18 +130,22 @@ instead of HEAD for all `git show` commands in this workflow.
    - Fill frontmatter every time a file is created or updated:
      - `issue` — the issue/PR id from step 2. Set once on create.
      - `date` — on create, set to the current commit's date
-       (`git show -s --format=%cs HEAD`). Set once on create; the
+       (`git show -s --format=%cs <COMMIT>`). Set once on create; the
        `git log --follow --diff-filter=A --format=%cs -- <file>` form is only
        for reconstructing `date` on an already-committed changelog file that
        lacks it.
-     - `paths` — files changed by this commit (`git show --name-only HEAD`),
+     - `paths` — files changed by this commit (`git show --name-only <COMMIT>`;
+       for merge commits use `git show --name-only -m <COMMIT>`),
        unioned with whatever paths are already listed, excluding
        `<CHANGELOG_DIR>` itself, deduped and sorted. `paths: []` is valid when
        the change has no direct file diff — do not force a path onto it.
-     - `tags` — pick from the vocabulary already in use (run the search
-       script's `--tags` mode); reuse an existing tag over inventing a
-       near-duplicate. If no entries exist yet, choose a small set of new
-       lowercase kebab-case tags describing the change.
+     - `tags` — pick from the vocabulary already in use (run
+       `<SEARCH_SCRIPT> --tags` (set this to the repo's tag-listing script,
+       e.g. `scripts/search-changelogs.sh --tags`) to list existing
+       tags); reuse an existing tag over inventing a near-duplicate. If no
+       entries exist yet, choose a small set of new lowercase kebab-case tags
+       describing the change. If the script is missing or fails, report that
+       tag reuse could not be verified and pick tags conservatively.
    - On update, never change `date` or `issue` — those are frozen at create
      time, even though `paths` and `tags` keep growing.
 
@@ -148,8 +163,8 @@ instead of HEAD for all `git show` commands in this workflow.
    - Commit creation always comes first; this workflow follows only after a
      successful commit.
    - If only writing a commit message, do not run this workflow.
-   - After writing or editing frontmatter, run the rebuild script so the
-     index never drifts from the file it was just generated from. If that
+   - After writing or editing frontmatter, run the repo's index rebuild command
+     (set `<REBUILD_INDEX_COMMAND>` to e.g. `npm run changelog:index`) so the index never drifts from the file it was just generated from. If that
      command is absent or fails, report that the index may be stale and that
      manual regeneration is needed, instead of silently proceeding.
    - If `INDEX.md` is gitignored, the rebuild only refreshes a local browsing
