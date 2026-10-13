@@ -13,7 +13,9 @@ three — tracker-, language-, and task-runner-agnostic.
 ## What it sets up
 
 - Frontmatter: `issue`, `date`, `paths`, `tags`
-- Generated, deterministic `INDEX.md`
+- Generated, deterministic `INDEX.md` — gitignored by default, because a committed
+  index conflicts on every parallel PR; opt in to committing it (with a
+  `merge=union` attribute and conflict-free output) if you need it in git
 - Rebuild/search scripts adapted to the repo's toolchain
 - A post-commit changelog-writing skill (or an update to the existing one)
 - Discovery/trigger pointers in existing agent docs
@@ -68,7 +70,7 @@ Any tracker, or none, works. The `.mjs` reference scripts need adapting
 | `assets/dev-changelog/SKILL.md` | Post-commit entry creation/update workflow. |
 | `assets/dev-changelog/dev-changelog-template.md` | Entry template with frontmatter. |
 | `assets/rebuild-dev-changelog-index.reference.mjs` | Deterministic index generator reference. |
-| `assets/search-dev-changelog.reference.mjs` | Index-only path/tag/title search reference. |
+| `assets/search-dev-changelog.reference.mjs` | Path/tag/title search reference; builds rows in memory, no index file needed. |
 
 ## License
 

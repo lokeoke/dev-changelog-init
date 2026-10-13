@@ -127,10 +127,9 @@ instead of HEAD for all `git show` commands in this workflow.
        unioned with whatever paths are already listed, excluding
        `<CHANGELOG_DIR>` itself, deduped and sorted. `paths: []` is valid when
        the change has no direct file diff — do not force a path onto it.
-     - `tags` — pick from the vocabulary already listed in `<CHANGELOG_DIR>`'s
-       `INDEX.md` preamble; reuse an existing tag over inventing a
-       near-duplicate. If `INDEX.md` does not exist yet, create it (or run
-       the rebuild script to generate it) and choose a small set of new
+     - `tags` — pick from the vocabulary already in use (run the search
+       script's `--tags` mode); reuse an existing tag over inventing a
+       near-duplicate. If no entries exist yet, choose a small set of new
        lowercase kebab-case tags describing the change.
    - On update, never change `date` or `issue` — those are frozen at create
      time, even though `paths` and `tags` keep growing.
@@ -149,14 +148,13 @@ instead of HEAD for all `git show` commands in this workflow.
    - Commit creation always comes first; this workflow follows only after a
      successful commit.
    - If only writing a commit message, do not run this workflow.
-   - After writing or editing frontmatter, run the rebuild script (see the
-     command named in `<CHANGELOG_DIR>/INDEX.md`'s header) so the index never
-     drifts from the file it was just generated from. If that command is
-     absent or fails, report that the index may be stale and that manual
-     regeneration is needed, instead of silently proceeding.
-   - If `INDEX.md` was just created in this same run and has no rebuild
-     command yet, skip the rebuild step and note that `INDEX.md` needs a
-     rebuild command added.
+   - After writing or editing frontmatter, run the rebuild script so the
+     index never drifts from the file it was just generated from. If that
+     command is absent or fails, report that the index may be stale and that
+     manual regeneration is needed, instead of silently proceeding.
+   - If `INDEX.md` is gitignored, the rebuild only refreshes a local browsing
+     copy; search never reads it. If it is committed, leave it unstaged like
+     any other post-commit change (see below).
    - Post-commit changelog changes remain unstaged unless explicitly asked to
      stage, amend, or create a follow-up docs commit.
    - Never stage unrelated files.
